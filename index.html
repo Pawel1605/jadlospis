@@ -2,8 +2,10 @@
 <html lang="pl">
 <head>
   <meta charset="UTF-8">
+  <title>Jadłospis</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
   <script type="importmap">
     {
       "imports": {
@@ -152,13 +154,35 @@
     table tr:last-child td:last-child {
       border-bottom-right-radius: 16px;
     }
+
+    .settings-button {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      z-index: 1000;
+    }
+
+    .lab-button {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      z-index: 1000;
+    }
   </style>
 </head>
 <body>
   <h1 class="md-typescale-display-medium">Jadłospis ZPSM w Elblągu</h1>
   
+  <md-outlined-icon-button class="settings-button" onclick="window.location.href='settings.html'">
+    <md-icon>settings</md-icon>
+  </md-outlined-icon-button>
+
+  <md-outlined-icon-button class="lab-button" onclick="window.location.href='new-index.html'">
+    <md-icon>experiment</md-icon>
+  </md-outlined-icon-button>
+
   <div class="info-box">
-    <h2>Dzisiaj jest <span id="today-day"></span></h2>
+    <h3>Dzisiaj jest <span id="today-day"></span></h3>
     <p class="md-typography--body2 today-info" id="soup-info"></p>
     <p class="md-typography--body2" id="main-info"></p>
   </div>
@@ -200,36 +224,78 @@
     </tbody>
   </table>
 
-  <p class="md-typescale-display">Ostatnia aktualizacja: 06.09 o godz. 16:32</p>
+  <p class="md-typescale-display">Ostatnia aktualizacja: 22.06 o godz. 17:35</p>
 
   <script>
     document.addEventListener('DOMContentLoaded', function () {
       const daysOfWeek = ['niedziela', 'poniedziałek', 'wtorek', 'środa', 'czwartek', 'piątek', 'sobota'];
       const today = new Date().getDay();
+      const currentHour = new Date().getHours();
+      const currentMinute = new Date().getMinutes();
       const todayDayElement = document.getElementById('today-day');
       const soupInfoElement = document.getElementById('soup-info');
       const mainInfoElement = document.getElementById('main-info');
       const menuTable = document.getElementById('menu-table');
       const rows = menuTable.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
-
+  
       todayDayElement.textContent = daysOfWeek[today];
-
-      if (today === 0 || today === 6) {
-        soupInfoElement.textContent = 'Następne dane o jadłospisie będą w poniedziałek między 8:00 - 10:00';
+  
+      if ((today === 0 || today === 6) || (today === 1 && (currentHour < 10 || (currentHour === 10 && currentMinute < 35)))) {
+        soupInfoElement.textContent = 'Następne dane o jadłospisie będą w poniedziałek o godzinie 10:35';
         mainInfoElement.textContent = '';
+        clearTable();
       } else {
-        for (let i = 0; i < rows.length; i++) {
-          const cells = rows[i].getElementsByTagName('td');
-          if (cells[0].textContent.toLowerCase() === daysOfWeek[today]) {
-            const soup = cells[1].textContent ? cells[1].textContent : 'Brak danych';
-            const main = cells[2].textContent ? cells[2].textContent : 'Brak danych';
-            soupInfoElement.textContent = `Zupa: ${soup}`;
-            mainInfoElement.textContent = `Obiad: ${main}`;
-            break;
-          }
-        }
+        fetch('menu.json')
+          .then(response => response.json())
+          .then(data => {
+            const todayMenu = data.days.find(item => item.day.toLowerCase() === daysOfWeek[today]);
+  
+            if (todayMenu) {
+              soupInfoElement.textContent = `Zupa: ${todayMenu.zupa}`;
+              mainInfoElement.textContent = `Obiad: ${todayMenu.obiad}`;
+              updateTable(todayMenu);
+            } else {
+              soupInfoElement.textContent = 'Zupa: Brak danych';
+              mainInfoElement.textContent = 'Obiad: Brak danych';
+              clearTable();
+            }
+          })
+          .catch(error => {
+            console.error('Błąd ładowania danych:', error);
+            soupInfoElement.textContent = 'Zupa: Brak danych';
+            mainInfoElement.textContent = 'Obiad: Brak danych';
+            clearTable();
+          });
       }
     });
-  </script>
+  
+    function updateTable(todayMenu) {
+      const daysOfWeek = ['niedziela', 'poniedziałek', 'wtorek', 'środa', 'czwartek', 'piątek', 'sobota'];
+      const menuTable = document.getElementById('menu-table');
+      const rows = menuTable.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+  
+      for (let i = 0; i < rows.length; i++) {
+        const cells = rows[i].getElementsByTagName('td');
+        const dayOfWeek = cells[0].textContent.toLowerCase();
+  
+        if (dayOfWeek === todayMenu.day.toLowerCase()) {
+          cells[1].textContent = todayMenu.zupa;
+          cells[2].textContent = todayMenu.obiad;
+          break;
+        }
+      }
+    }
+  
+    function clearTable() {
+      const menuTable = document.getElementById('menu-table');
+      const rows = menuTable.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+  
+      for (let i = 0; i < rows.length; i++) {
+        const cells = rows[i].getElementsByTagName('td');
+        cells[1].textContent = 'Brak danych';
+        cells[2].textContent = 'Brak danych';
+      }
+    }
+  </script>  
 </body>
 </html>
